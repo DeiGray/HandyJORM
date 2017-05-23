@@ -1,2 +1,2 @@
 # HandyJORM
-An user-friendly Java ORM.
+An user-friendly Java ORM Library.
