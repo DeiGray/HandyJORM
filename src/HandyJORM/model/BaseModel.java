@@ -3,6 +3,7 @@ package HandyJORM.model;
 
 import HandyJORM.exception.IllegalSoftQueryException;
 import HandyJORM.exception.InvalidDBPropertyTypeException;
+import HandyJORM.exception.InvalidFieldNameGiven;
 import HandyJORM.exception.UnknowFieldModelException;
 import HandyJORM.query.SoftQuery;
 import HandyJORM.query.SqlFilter;
@@ -10,6 +11,7 @@ import HandyJORM.query.SqlOrder;
 import HandyJORM.session.BaseDBSession;
 
 import java.lang.reflect.Field;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 /**
@@ -26,7 +28,7 @@ import java.util.ArrayList;
  * To fill a model with db values, you can use findOneLikeMe(), or the static find() method (see examples in methods descriptions).
  *
  * @author DeiGray
- * @version 0.1
+ * @version 0.2
  */
 
 public abstract class BaseModel {
@@ -38,21 +40,21 @@ public abstract class BaseModel {
     /**
      * fields in DB linked with a model field.
      */
-    public ModelAttributesCollection _modelAttributes;
+    public ModelAttributesCollection modelAttributes;
 
     /**
      * Basic constructor called by childs.
      * @throws UnknowFieldModelException field name issue, or bindColumns issue.
      */
     public BaseModel() throws UnknowFieldModelException {
-        _modelAttributes = new ModelAttributesCollection();
+        modelAttributes = new ModelAttributesCollection();
 
 
         Field[] fields = this.getClass().getFields();
         for (Field field :
                 fields) {
             field.setAccessible(true);
-            _modelAttributes.addAttribute(ModelAttributeBuilder.initModelAttributes(this,field,bindColumns()));
+            modelAttributes.addAttribute(ModelAttributeBuilder.initModelAttributes(this,field,bindColumns()));
 
         }
     }
@@ -61,7 +63,6 @@ public abstract class BaseModel {
      * Depreciated
      */
     public abstract String getTableName();
-    //public abstract Object[][] tableProperties();
 
     /**
      * method that link DB field name with Model field name.
@@ -93,11 +94,74 @@ public abstract class BaseModel {
     public abstract String[][] bindColumns();
 
     /**
-     * give current working class.
+     * Array to describe foreign Keys
+     *
+     * each row is format as : {"inner_colname","joined_table_colname","joined_table_classname"}
      * @return
      */
-    public Class currentClass(){
-        return this.getClass();
+    public String[][] references(){
+        return new String[0][];
+    }
+
+    /**
+     * Find the model link inner model by a foreignKey.
+     * @param targetKlass
+     * @return A targetClass "persistant" instance, linked to the caller.
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     * @throws InvalidFieldNameGiven
+     */
+    //TODO : TEST IT
+    public <T extends BaseModel> T hasOne(Class targetKlass) throws IllegalAccessException, InstantiationException, InvalidFieldNameGiven {
+        T targetModel = (T) targetKlass.newInstance();
+
+        ModelAttribute[] mas = getForeignKeyMASToSet(this,targetModel);
+        if(null != mas){
+            mas[1].setValue(mas[0].getValue());
+            return targetModel.findOneLikeMe();
+        }else{
+            return null;
+        }
+    }
+
+    public <T extends BaseModel> ArrayList<T> hasMany(Class targetKlass) throws IllegalAccessException, InstantiationException, InvalidFieldNameGiven {
+        T targetModel = (T) targetKlass.newInstance();
+
+        ModelAttribute[] mas = getForeignKeyMASToSet(targetModel,this);
+        if(null != mas){
+            mas[0].setValue(mas[1].getValue());
+            return targetModel.findAllLikeMe();
+        }else{
+            return null;
+        }
+    }
+
+    /**
+     * Find a couple of ModelAttributes to get and set value of the foreignKeyField;
+     *
+     * @param modelReferences the primaryKey model
+     * @param modelBindColumns the foreignKey model
+     * @return Give an Array of 2 ModelAttributes : the first from inner class, the second from foreignKey Class.
+     * @throws InvalidFieldNameGiven
+     */
+    private static <T extends BaseModel> ModelAttribute[] getForeignKeyMASToSet(T modelReferences, T modelBindColumns) throws InvalidFieldNameGiven {
+        String[][] references = modelReferences.references();
+        if(references.length <= 0)
+            return null;
+        for (String [] ref : references) {
+            if(3 != ref.length)
+                return null;
+            else{
+                ModelAttribute ma = modelBindColumns.modelAttributes.getByColName(ref[1]);
+                if(null != ma){
+                    ModelAttribute[] mas = new ModelAttribute[2];
+                    mas[0] = modelReferences.modelAttributes.getByColName(ref[0]);
+                    mas[1] = ma;
+                    return mas;
+                }
+            }
+        }
+        return null;
     }
 
     /**
@@ -109,30 +173,33 @@ public abstract class BaseModel {
     }
 
     /**
-     * make model update his line in db.
-     * @param baseDBSession
-     * @return
+     * Make model update his line in db.
+     * Update in database, the line with this model ID.
+     * @return true if the query works
      */
-    public boolean update(BaseDBSession baseDBSession){
-        return false;
+    public boolean update() throws UnknowFieldModelException, IllegalAccessException, InvalidDBPropertyTypeException, SQLException {
+        String query = this.modelAttributes.getUpdateString(this.getTableName());
+        return _adbSess.executeUpdate(query);
     }
 
     /**
      * store the model in a line in the table linked.
-     * @param baseDBSession
-     * @return
+     *
+     * @return true if the query works
      */
-    public boolean save(BaseDBSession baseDBSession){
-        return false;
+    public boolean save() throws IllegalAccessException, SQLException, InvalidDBPropertyTypeException, UnknowFieldModelException {
+        String query = this.modelAttributes.getSaveString(this.getTableName());
+        return _adbSess.executeUpdate(query);
     }
 
     /**
      * Delete the line that represent the model in the db table.
-     * @param baseDBSession
-     * @return
+     * Delete in database, the line with this model ID.
+     * @return true if the query works
      */
-    public boolean delete(BaseDBSession baseDBSession){
-        return false;
+    public boolean delete() throws InvalidDBPropertyTypeException, IllegalAccessException {
+        String query = this.modelAttributes.getDeleteString(this.getTableName());
+        return _adbSess.executeUpdate(query);
     }
 
     /**
@@ -184,8 +251,8 @@ public abstract class BaseModel {
     public <T extends BaseModel> T findOneLikeMe(){
         T model = null;
         try {
-                ArrayList<SqlFilter> filters = this._modelAttributes.getFilters();
-                ArrayList<SqlOrder> orders = this._modelAttributes.getOrders();
+                ArrayList<SqlFilter> filters = this.modelAttributes.getFilters(true,true);
+                ArrayList<SqlOrder> orders = this.modelAttributes.getOrders();
                 model = find(this.getClass())
                         .where(filters.toArray(new SqlFilter[filters.size()]))
                         .orderBy(orders.toArray(new SqlOrder[orders.size()]))
@@ -220,8 +287,8 @@ public abstract class BaseModel {
     public <T extends BaseModel> ArrayList<T> findAllLikeMe(){
         ArrayList<T> models = new ArrayList<>();
         try {
-            ArrayList<SqlFilter> filters = this._modelAttributes.getFilters();
-            ArrayList<SqlOrder> orders = this._modelAttributes.getOrders();
+            ArrayList<SqlFilter> filters = this.modelAttributes.getFilters(true,true);
+            ArrayList<SqlOrder> orders = this.modelAttributes.getOrders();
             models = find(this.getClass())
                     .where(filters.toArray(new SqlFilter[filters.size()]))
                     .orderBy(orders.toArray(new SqlOrder[orders.size()]))

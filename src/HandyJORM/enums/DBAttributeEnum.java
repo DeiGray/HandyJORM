@@ -6,7 +6,7 @@ package HandyJORM.enums;
  * Kinds of database fields type.
  *
  * @author DeiGray
- * @version 0.1
+ * @version 0.2
  */
 public enum DBAttributeEnum {
 
@@ -24,5 +24,13 @@ public enum DBAttributeEnum {
     @Override
     public String toString() {
         return _name;
+    }
+
+    /**
+     * A equals to compare a DBAtbENum with a string.
+     * @return true if it is the same name or reference.
+     */
+    public boolean equals(String s){
+        return super.equals(s) || s.toString().equals(this.toString());
     }
 }

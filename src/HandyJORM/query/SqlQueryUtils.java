@@ -3,16 +3,21 @@ package HandyJORM.query;
 import HandyJORM.enums.DBPropertyTypeEnum;
 import HandyJORM.exception.InvalidDBPropertyTypeException;
 
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 
 /**
  * Created by Fabien on 03/05/2017.
  *
  * Some utils query to create SQL String.
+ *
+ * @author DeiGray
+ * @version 0.2
  */
 
- class SqlQueryUtils {
+ public class SqlQueryUtils {
     /**
      * Format values in String to use it in SQL.
      * @param type
@@ -20,20 +25,29 @@ import java.sql.SQLException;
      * @return
      * @throws InvalidDBPropertyTypeException
      */
-     static String toSqlValue(DBPropertyTypeEnum type, Object value) throws InvalidDBPropertyTypeException {
+     public static String toSqlValue(DBPropertyTypeEnum type, Object value) throws InvalidDBPropertyTypeException {
         String result = "";
         switch (type){
             case Integer :
                 result += value.toString();
                 break;
             case String:
-                result += "'" + value + "'";
+                if(null != value)
+                    result += "'" + value + "'";
+                else
+                    result+= "''";
                 break;
             case Date:
-                result += value.toString();
+                if(null != value)
+                    result += "'"+value.toString()+"'";
+                else
+                    result+= "'"+(new Date(1l).toString())+"'";
                 break;
             case Timestamp:
-                result += value.toString();
+                if(null != value)
+                    result += "'"+value.toString()+"'";
+                else
+                   result+= "'"+(new Timestamp(1l).toString())+"'";
                 break;
             default:
                 throw new InvalidDBPropertyTypeException(type);

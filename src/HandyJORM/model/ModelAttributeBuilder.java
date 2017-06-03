@@ -68,11 +68,12 @@ public class ModelAttributeBuilder {
      */
     public static <T extends BaseModel> void  affectDataToModel(T newModel, ArrayList<DBResult> data) throws IllegalAccessException, InvalidFieldNameGiven {
         if(data.size() > 0) {
-            ModelAttributesCollection mc = newModel._modelAttributes;
-            for (int i = 0; i < data.size() - 1; i++) {
-                Field field = mc.getFieldByColName(data.get(i).getName());
+            ModelAttributesCollection mc = newModel.modelAttributes;
+            for (DBResult res :
+                    data) {
+                Field field = mc.getFieldByColName(res.getName());
                 field.setAccessible(true);
-                field.set(newModel,data.get(i).getColumnValue());
+                field.set(newModel,res.getColumnValue());
             }
         }
     }

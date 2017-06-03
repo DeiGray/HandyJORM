@@ -30,7 +30,7 @@ public class SoftQuerySelectState extends BaseSoftQueryState {
                 modelAttributes) {
             _cols.addAttribute(ma);
         }
-        _sqlQueryString += _cols.toSqlString() + " ";
+        _sqlQueryString += _cols.toSqlColumnNamesString() + " ";
         sq.changeState(new SoftQueryFromState(_baseDBSession,super._sqlQueryString));
     }
     /**

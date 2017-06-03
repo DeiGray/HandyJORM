@@ -12,6 +12,9 @@ import java.util.ArrayList;
 
 /**
  * Created by Fabien on 11/05/2017.
+ *
+ * @author DeiGray
+ * @version 0.2
  */
 public class SoftQueryWhereState extends BaseSoftQueryState {
     public <T extends BaseModel> SoftQueryWhereState(BaseDBSession baseDBSession, String sqlQuery, ModelAttributesCollection cols, String tableName, T model){
@@ -48,7 +51,6 @@ public class SoftQueryWhereState extends BaseSoftQueryState {
      */
     @Override
     public void where(SoftQuery sq, SqlFilter... filters) throws IllegalSoftQueryException, InvalidDBPropertyTypeException {
-        _filters = filters;
         if(null != filters && filters.length > 0) {
             _sqlQueryString+=" WHERE ";
             for (SqlFilter fil :
@@ -57,6 +59,7 @@ public class SoftQueryWhereState extends BaseSoftQueryState {
             }
             _sqlQueryString = _sqlQueryString.substring(0, _sqlQueryString.length() - 2);
         }
+        _filters = filters;
     }
     /**
      * {@inheritDoc}

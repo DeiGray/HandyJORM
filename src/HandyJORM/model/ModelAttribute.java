@@ -5,9 +5,11 @@ import HandyJORM.enums.ComparisonStrategyEnum;
 import HandyJORM.enums.DBAttributeEnum;
 import HandyJORM.enums.DBPropertyTypeEnum;
 import HandyJORM.enums.DirectionOrderEnum;
+import HandyJORM.exception.InvalidDBPropertyTypeException;
 import HandyJORM.exception.UnknowFieldModelException;
 import HandyJORM.query.SqlFilter;
 import HandyJORM.query.SqlOrder;
+import HandyJORM.query.SqlQueryUtils;
 
 import java.lang.reflect.Field;
 
@@ -15,7 +17,7 @@ import java.lang.reflect.Field;
  * A model field with a table column, like key statue (primary, foreign or common attribute)
  *
  * @author DeiGray
- * @version 0.1
+ * @version 0.2
  */
 public class ModelAttribute {
     private DBAttributeEnum _attributeType;
@@ -42,6 +44,14 @@ public class ModelAttribute {
         boolean result =  ModelAttributeBuilder.isDefaultValue(this.getModel(),this.getField());
         _field.setAccessible(false);
         return result;
+    }
+
+    public boolean isPrimaryKey(){
+        return _attributeType.equals(DBAttributeEnum.PrimaryKey) || _attributeType.equals(DBAttributeEnum.PrimaryForeignKey);
+    }
+
+    public boolean isForeignKey(){
+        return _attributeType.equals(DBAttributeEnum.ForeignKey) || _attributeType.equals(DBAttributeEnum.PrimaryForeignKey);
     }
 
     /* Classic getters */
@@ -82,7 +92,24 @@ public class ModelAttribute {
      */
     public Object getValue() throws IllegalAccessException {
         _field.setAccessible(true);
-        return _field.get(_model);
+        Object o = _field.get(_model);
+        _field.setAccessible(false);
+        return o;
+    }
+
+    public void setValue(Object o) throws IllegalAccessException {
+        _field.setAccessible(true);
+        _field.set(_model,o);
+        _field.setAccessible(false);
+    }
+
+    /**
+     * Bind the modelAttribute field value with a correct SQL format.
+     * It works like a bindParams, with the model field value.
+     * @return a part of a SQL string.
+     */
+    public String toSqlValue() throws IllegalAccessException, InvalidDBPropertyTypeException {
+        return SqlQueryUtils.toSqlValue(_type,this.getValue());
     }
 
     /**

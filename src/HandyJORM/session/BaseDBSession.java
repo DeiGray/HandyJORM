@@ -13,7 +13,7 @@ import java.util.ArrayList;
  *
  * Used to interact with the database.
  * @author DeiGray
- * @version 0.1
+ * @version 0.2
  */
 public abstract class BaseDBSession {
     protected ResultSet cursor;
@@ -35,7 +35,7 @@ public abstract class BaseDBSession {
      * @throws ClassNotFoundException
      * @throws SQLException
      */
-    BaseDBSession(String pilote, String connectionString, String login, String password) throws ClassNotFoundException, SQLException {
+    public BaseDBSession(String pilote, String connectionString, String login, String password) throws ClassNotFoundException, SQLException {
         DRIVER = pilote;
         CONNECTION_STRING = connectionString;
         LOGIN = login;
@@ -167,9 +167,7 @@ public abstract class BaseDBSession {
         try
         {
             int result = this.statement.executeUpdate(req) ;
-            System.out.println();
-            System.out.println("Resultat de la requete : "+result);
-            //si result = 0, requete echoué.
+            //si result = 0, requete échoue.
             if (result==0)
                 return false;
             else
@@ -177,7 +175,6 @@ public abstract class BaseDBSession {
         }
         catch(Exception ex)
         {
-            System.err.println("Erreur : "+ex);
             return false;
         }
     }
