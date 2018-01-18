@@ -22,6 +22,7 @@ public class MyDBSess extends BaseDBSession {
     
     private MyDBSess(/*params*/){
         super(/*params*/);
+        //super("com.mysql.jdbc.Driver","jdbc:mysql://url/to/bdd","login","password");
     }
     
     public static MyDBSess getInstance(){
